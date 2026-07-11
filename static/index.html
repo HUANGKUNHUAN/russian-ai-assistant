@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Русский AI Помощник</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #1a1a2e; color: #e0e0e0; height: 100vh; display: flex; flex-direction: column;
+  }
+  .header {
+    background: #16213e; padding: 12px 16px; display: flex; align-items: center;
+    justify-content: space-between; flex-shrink: 0;
+  }
+  .header h1 { font-size: 18px; display: flex; align-items: center; gap: 8px; }
+  .header-right { display: flex; gap: 6px; align-items: center; }
+  .mode-badge {
+    font-size: 11px; padding: 3px 10px; border-radius: 12px;
+    background: #2d5f2d; color: #8f8;
+  }
+  .mode-badge.online { background: #1a3a5c; color: #6af; }
+  .icon-btn {
+    background: none; border: none; color: #ccc; font-size: 20px;
+    cursor: pointer; padding: 4px 8px; border-radius: 6px;
+  }
+  .icon-btn:hover { background: #0f3460; }
+
+  /* Settings */
+  .settings-panel {
+    display: none; background: #16213e; padding: 16px; flex-shrink: 0;
+    max-height: 75vh; overflow-y: auto;
+  }
+  .settings-panel.open { display: block; }
+  .settings-panel label { display: block; font-size: 13px; font-weight: 600; margin: 10px 0 4px; }
+  .settings-panel select, .settings-panel input {
+    width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid #333;
+    background: #1a1a2e; color: #e0e0e0; font-size: 14px; outline: none;
+  }
+  .settings-panel select:focus, .settings-panel input:focus { border-color: #206BE6; }
+  .settings-panel .hint { font-size: 11px; color: #888; margin-top: 4px; }
+  .settings-panel .btn-row { display: flex; gap: 8px; margin-top: 14px; }
+  .settings-panel .btn-row button {
+    flex: 1; padding: 8px; border: none; border-radius: 8px;
+    font-size: 14px; cursor: pointer; font-weight: 600;
+  }
+  .btn-save { background: #206BE6; color: #fff; }
+  .btn-close-settings { background: #333; color: #ccc; }
+
+  /* Chat */
+  .chat-area { flex: 1; overflow-y: auto; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
+  .chat-area::-webkit-scrollbar { width: 4px; }
+  .chat-area::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+
+  .msg { max-width: 85%; padding: 10px 14px; border-radius: 14px; font-size: 15px; line-height: 1.5; word-wrap: break-word; }
+  .msg.user { background: #2d5f2d; align-self: flex-end; border-bottom-right-radius: 4px; }
+  .msg.bot { background: #2b2b2b; align-self: flex-start; border-bottom-left-radius: 4px; }
+  .msg.system { background: #5a4a1a; align-self: center; font-size: 13px; text-align: center; max-width: 90%; }
+  .msg .time { font-size: 10px; color: #888; margin-top: 4px; text-align: right; }
+
+  .typing { background: #2b2b2b; align-self: flex-start; padding: 12px 18px; }
+  .typing-dots { display: flex; gap: 5px; }
+  .typing-dots span {
+    width: 9px; height: 9px; border-radius: 50%; background: #666;
+    animation: bounce 1.4s infinite ease-in-out both;
+  }
+  .typing-dots span:nth-child(1) { animation-delay: -0.32s; }
+  .typing-dots span:nth-child(2) { animation-delay: -0.16s; }
+  @keyframes bounce { 0%,80%,100% { transform: scale(0); } 40% { transform: scale(1); } }
+
+  /* Topics */
+  .topics {
+    display: flex; gap: 6px; padding: 8px 14px; overflow-x: auto;
+    flex-shrink: 0; background: #16213e;
+  }
+  .topics::-webkit-scrollbar { height: 0; }
+  .topic-btn {
+    white-space: nowrap; font-size: 12px; padding: 5px 12px;
+    border-radius: 16px; border: 1px solid #333; background: #1a1a2e;
+    color: #ccc; cursor: pointer; flex-shrink: 0;
+  }
+  .topic-btn:active { background: #0f3460; }
+
+  /* Input */
+  .input-row {
+    display: flex; gap: 8px; padding: 8px 12px 12px;
+    background: #16213e; flex-shrink: 0;
+  }
+  .input-row input {
+    flex: 1; padding: 10px 14px; border-radius: 22px; border: 1px solid #333;
+    background: #1a1a2e; color: #e0e0e0; font-size: 15px; outline: none;
+  }
+  .input-row input:focus { border-color: #206BE6; }
+  .input-row button {
+    width: 44px; height: 44px; border-radius: 50%; border: none;
+    background: #206BE6; color: #fff; font-size: 20px; cursor: pointer;
+  }
+  .input-row button:disabled { opacity: 0.5; }
+  .welcome { text-align: center; margin: auto; padding: 20px; color: #666; }
+  .welcome h2 { font-size: 28px; margin-bottom: 8px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🤖 Русский AI</h1>
+  <div class="header-right">
+    <span class="mode-badge" id="modeBadge">💻 Офлайн</span>
+    <button class="icon-btn" id="settingsBtn">⚙</button>
+  </div>
+</div>
+
+<div class="settings-panel" id="settingsPanel">
+  <label>Режим работы</label>
+  <select id="apiMode">
+    <option value="offline">💻 Офлайн</option>
+    <option value="online">🌐 Онлайн (через API)</option>
+  </select>
+  <label>Тип API</label>
+  <select id="apiType">
+    <option value="anthropic">Anthropic (Claude)</option>
+    <option value="openai">OpenAI (ChatGPT)</option>
+  </select>
+  <label>API-ключ</label>
+  <input type="password" id="apiKey" placeholder="Введите ваш API-ключ...">
+  <div class="hint">console.anthropic.com 或 platform.openai.com</div>
+  <div class="btn-row">
+    <button class="btn-save" id="saveSettings">✅ Сохранить</button>
+    <button class="btn-close-settings" id="closeSettings">❌ Закрыть</button>
+  </div>
+</div>
+
+<div class="chat-area" id="chatArea">
+  <div class="welcome" id="welcome">
+    <h2>🤖</h2>
+    <p><strong>Здравствуйте!</strong><br>Я ваш интеллектуальный помощник.<br>Напишите что-нибудь на русском!</p>
+  </div>
+</div>
+
+<div class="topics" id="topics">
+  <button class="topic-btn" data-text="Расскажи о себе">📖 О себе</button>
+  <button class="topic-btn" data-text="Что ты умеешь?">🎯 Что умеешь?</button>
+  <button class="topic-btn" data-text="Расскажи шутку">😂 Шутка</button>
+  <button class="topic-btn" data-text="Напиши стихотворение">📝 Стих</button>
+  <button class="topic-btn" data-text="Посоветуй книгу">📚 Книга</button>
+  <button class="topic-btn" data-text="Посоветуй фильм">🎬 Фильм</button>
+  <button class="topic-btn" data-text="Идея для проекта">💡 Идея</button>
+</div>
+
+<div class="input-row">
+  <input id="msgInput" type="text" placeholder="Введите сообщение..." autofocus>
+  <button id="sendBtn">➡</button>
+</div>
+
+<script>
+let sessionId = localStorage.getItem('sessionId') || Math.random().toString(36).slice(2,10);
+localStorage.setItem('sessionId', sessionId);
+
+let apiMode = localStorage.getItem('apiMode') || 'offline';
+let apiType = localStorage.getItem('apiType') || 'anthropic';
+let apiKey = localStorage.getItem('apiKey') || '';
+let loading = false;
+
+const $ = id => document.getElementById(id);
+const chatArea = $('chatArea'), welcome = $('welcome');
+const msgInput = $('msgInput'), sendBtn = $('sendBtn');
+
+$('apiMode').value = apiMode; $('apiType').value = apiType; $('apiKey').value = apiKey;
+updateBadge();
+
+function updateBadge() {
+  const b = $('modeBadge');
+  if (apiMode === 'online') { b.textContent = '🌐 Онлайн'; b.className = 'mode-badge online'; }
+  else { b.textContent = '💻 Офлайн'; b.className = 'mode-badge'; }
+}
+
+function addMsg(role, text) {
+  welcome.style.display = 'none';
+  const d = document.createElement('div');
+  d.className = 'msg ' + role;
+  const now = new Date();
+  const ts = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
+  d.innerHTML = text.replace(/\n/g, '<br>') + '<div class="time">' + ts + '</div>';
+  chatArea.appendChild(d);
+  chatArea.scrollTop = chatArea.scrollHeight;
+}
+
+function showTyping() {
+  const d = document.createElement('div'); d.className = 'msg typing'; d.id = 'typingInd';
+  d.innerHTML = '<div class="typing-dots"><span></span><span></span><span></span></div>';
+  chatArea.appendChild(d); chatArea.scrollTop = chatArea.scrollHeight;
+}
+function hideTyping() { const e = $('typingInd'); if(e) e.remove(); }
+
+async function send(text) {
+  if (loading || !text.trim()) return;
+  loading = true; sendBtn.disabled = true;
+  addMsg('user', text); showTyping();
+  try {
+    const r = await fetch('/api/chat', { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({message:text, session_id:sessionId, api_mode:apiMode, api_type:apiType, api_key:apiKey}) });
+    const d = await r.json();
+    if (d.session_id) { sessionId = d.session_id; localStorage.setItem('sessionId', sessionId); }
+    hideTyping(); addMsg('bot', d.reply || d.error);
+  } catch(e) { hideTyping(); addMsg('system', '⚠️ Ошибка соединения.'); }
+  loading = false; sendBtn.disabled = false;
+}
+
+sendBtn.onclick = () => { send(msgInput.value); msgInput.value = ''; };
+msgInput.onkeydown = e => { if(e.key === 'Enter') { send(msgInput.value); msgInput.value = ''; } };
+
+$('topics').onclick = e => {
+  const b = e.target.closest('.topic-btn');
+  if(b) send(b.dataset.text);
+};
+
+$('settingsBtn').onclick = () => $('settingsPanel').classList.toggle('open');
+$('closeSettings').onclick = () => $('settingsPanel').classList.remove('open');
+$('saveSettings').onclick = () => {
+  apiMode = $('apiMode').value; apiType = $('apiType').value; apiKey = $('apiKey').value.trim();
+  localStorage.setItem('apiMode', apiMode); localStorage.setItem('apiType', apiType); localStorage.setItem('apiKey', apiKey);
+  updateBadge(); $('settingsPanel').classList.remove('open');
+  addMsg('system', '✅ Настройки обновлены. Режим: ' + (apiMode==='online'?'🌐 Онлайн':'💻 Офлайн') + '.');
+};
+</script>
+</body>
+</html>
